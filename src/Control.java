@@ -41,8 +41,8 @@ public class Control {
 
         String ficoFicoPath = "C:\\Users\\ahyan\\Dropbox\\CreditSurfaceTheory\\Data\\FicoFico.csv";
 
-        CreditSurfaceTestingB creditSurfaceTestingB = new CreditSurfaceTestingB();
-        Matrix credit_surface = creditSurfaceTestingB.CreditSurface("0", price_index, yield_curve, ficoFicoPath);
+        CreditSurface creditSurface = new CreditSurface();
+        Matrix credit_surface = creditSurface.CreditSurface("0", price_index, yield_curve, ficoFicoPath);
         double[][] cs = credit_surface.getArray();
 
         double[] excess_demand = new double[A.length * W.length * FICO_index.length];
