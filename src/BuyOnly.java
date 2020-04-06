@@ -5,13 +5,18 @@ import com.google.common.primitives.Ints;
 import java.lang.management.ManagementFactory;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
+
 import com.sun.management.OperatingSystemMXBean;
+import org.javatuples.Quartet;
+import org.javatuples.Triplet;
 
 
-public class ProofOfConcept {
+public class BuyOnly {
 
-    public double ExcessDemand(double asset_endowment, double income, int fico_index, double price_guess,
-                               double[] input_price_index, double[] input_yield_curve, double[] credit_surface){
+    public Quartet<Integer, Double, Double, Double> Demand(int id, double asset_endowment, double income,
+                          double[] credit_surface, double price_guess,
+                          double[] input_price_index, double[] input_yield_curve){
 
         // SETTING UP THE CREDIT SURFACE
 
@@ -204,7 +209,7 @@ public class ProofOfConcept {
 
         // Optimal mortgage contract
         double mortgage_rate = M.get(Ints.max(index_mortgage));
-        double ltv = LTV.get(Ints.max(index_mortgage));
+        double oltv = LTV.get(Ints.max(index_mortgage));
 
         DecimalFormat decimalFormat = new DecimalFormat("0.00");
 
@@ -212,49 +217,8 @@ public class ProofOfConcept {
         //System.out.println("OLTV = " + decimalFormat.format(ltv));
         //System.out.println("--------------");
 
-        double excess_demand = q_demand;
-
-        return excess_demand;
-    }
-
-    public static void main(String args[]){
-
-        long startTime = System.nanoTime();
-
-        //double[] price_index = {108.792, 109.215, 109.643, 110.395, 111.248, 112.203, 113.274, 114.229, 114.991, 115.467, 115.682, 115.839, 116.056};
-        double[] price_index = {0.515, 0.517, 0.519, 0.521, 0.523, 0.525, 0.527, 0.529, 0.533, 0.536, 0.539, 0.544, 0.548};
-        //double[] price_index = {0.517, 0.519, 0.521, 0.523, 0.525, 0.527, 0.529, 0.533, 0.536, 0.539, 0.544, 0.548, 0.5595};
-        //double[] price_index = {0.519, 0.521, 0.523, 0.525, 0.527, 0.529, 0.533, 0.536, 0.539, 0.544, 0.548, 0.5595, 0.562};
-        //double[] price_index = {0.521, 0.523, 0.525, 0.527, 0.529, 0.533, 0.536, 0.539, 0.544, 0.548, 0.5595, 0.562, 0.5615};
-        //double[] price_index = {0.523, 0.525, 0.527, 0.529, 0.533, 0.536, 0.539, 0.544, 0.548, 0.5595, 0.562, 0.5615, 0.5605};
-        //double[] price_index = {0.525, 0.527, 0.529, 0.533, 0.536, 0.539, 0.544, 0.548, 0.5595, 0.562, 0.5615, 0.5605, 0.559};
-        //double[] price_index = {0.527, 0.529, 0.533, 0.536, 0.539, 0.544, 0.548, 0.5595, 0.562, 0.5615, 0.5605, 0.559, 0.557};
-        //double[] price_index = {0.529, 0.533, 0.536, 0.539, 0.544, 0.548, 0.5595, 0.562, 0.5615, 0.5605, 0.559, 0.557, 0.5555};
-        //double[] price_index = {0.533, 0.536, 0.539, 0.544, 0.548, 0.5595, 0.562, 0.5615, 0.5605, 0.559, 0.557, 0.5555, 0.535};
-
-
-        double[] yield_curve = {1.73, 1.74, 1.85, 2.28, 3.22, 3.75, 4.52, 4.97, 5.20, 5.86, 5.56};
-
-        double endowment = 0.01;
-        double income = 0.01;
-        int fico_index = 6;
-
-        String ficoFicoPath = "C:\\Users\\ahyan\\Dropbox\\CreditSurfaceTheory\\Data\\FicoFico.csv";
-
-        Matrix creditSurface = new CreditSurfaceTestingB().CreditSurface("0", price_index, yield_curve, ficoFicoPath);
-        double[][] cs = creditSurface.getArray();
-
-        double excessDemand = new ProofOfConcept().ExcessDemand(endowment, income, fico_index, 0.104, price_index, yield_curve, cs[fico_index]);
-
-        long endTime = System.nanoTime();
-
-        long duration = (endTime - startTime);
-
-        OperatingSystemMXBean bean = (com.sun.management.OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
-
-        System.out.println("CPU Usage = " + bean.getProcessCpuLoad() * 100 + "%");
-
-        System.out.println(Math.round(duration * 1e-9)+ " seconds");
+        Quartet<Integer, Double, Double, Double> demand = Quartet.with(id, q_demand, mortgage_rate, oltv);
+        return demand;
     }
 
 }

@@ -1,7 +1,6 @@
 import Jama.Matrix;
 
 import org.apache.commons.math3.analysis.UnivariateFunction;
-import org.apache.commons.math3.analysis.interpolation.NevilleInterpolator;
 import org.apache.commons.math3.analysis.interpolation.SplineInterpolator;
 import org.apache.commons.math3.analysis.interpolation.UnivariateInterpolator;
 
@@ -10,17 +9,14 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.IntStream;
 
 
-public class CreditSurfaceTestingB {
+public class CreditSurface {
 
-    public Matrix CreditSurface(String MonthYear, double[] HPIYear, double[] yieldCurve, String ficoFicoCrisisPath) {
-
-        //System.out.println("Developing CS for " + MonthYear);
+    public Matrix CreditSurface(String MonthYear, double[] HPIYear, double[] yieldCurve) {
 
         //Input files for probabilities
 
@@ -28,6 +24,8 @@ public class CreditSurfaceTestingB {
                 "DefaultRates" + "Jan-02" + ".csv";
         String prepayRatesPath = "C:\\Users\\ahyan\\Dropbox\\CreditSurfaceTheory\\Data\\MonthlyPrepayData\\" +
                 "PrepayRates" + "Jan-02" + ".csv";
+        String ficoFicoPath =  "C:\\Users\\ahyan\\Dropbox\\CreditSurfaceTheory\\Data\\FicoFico.csv";
+
 
         //Output file
 
@@ -116,7 +114,7 @@ public class CreditSurfaceTestingB {
 
         /////////FICOFICO MATRIX////////////////
         List<String[]> rowList3 = new ArrayList<String[]>();
-        try(BufferedReader br = new BufferedReader(new FileReader(ficoFicoCrisisPath))){
+        try(BufferedReader br = new BufferedReader(new FileReader(ficoFicoPath))){
             String line;
             while((line = br.readLine()) != null){
                 String[] lineItems = line.split(",");
@@ -303,88 +301,6 @@ public class CreditSurfaceTestingB {
 
         return interpolatedCreditSurface;
 
-
-    }
-
-    public static void main(String args[]){
-
-        String dataPath = "C:\\Users\\ahyan\\Dropbox\\CreditSurfaceTheory\\Data\\";
-
-        //Import Case Shiller Data
-
-        List<String[]> rowList = new ArrayList<String[]>();
-        try (BufferedReader br = new BufferedReader(new FileReader(dataPath + "MonthlyHPIData.csv"))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                String[] lineItems = line.split(",");
-                rowList.add(lineItems);
-            }
-            br.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        String[][] HPI = new String[rowList.size()][];
-        for (int i = 0; i < rowList.size(); i++) {
-            String[] row = rowList.get(i);
-            HPI[i] = row;
-        }
-
-        //Import Yield Curve Data
-        List<String[]> rowList2 = new ArrayList<String[]>();
-        try (BufferedReader br = new BufferedReader(new FileReader(dataPath + "MonthlyYieldCurve.csv"))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                String[] lineItems = line.split(",");
-                rowList2.add(lineItems);
-            }
-            br.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        String[][] YieldCurve = new String[rowList2.size()][];
-        for (int i = 0; i < rowList2.size(); i++) {
-            String[] row2 = rowList2.get(i);
-            YieldCurve[i] = row2;
-        }
-
-
-        String[] monthyear = {"Jan-02","Feb-02","Mar-02","Apr-02","May-02","Jun-02","Jul-02","Aug-02","Sep-02","Oct-02","Nov-02","Dec-02","Jan-03","Feb-03","Mar-03","Apr-03","May-03","Jun-03","Jul-03","Aug-03","Sep-03","Oct-03","Nov-03","Dec-03","Jan-04","Feb-04","Mar-04","Apr-04","May-04","Jun-04","Jul-04","Aug-04","Sep-04","Oct-04","Nov-04","Dec-04","Jan-05","Feb-05","Mar-05","Apr-05","May-05","Jun-05","Jul-05","Aug-05","Sep-05","Oct-05","Nov-05","Dec-05","Jan-06","Feb-06","Mar-06","Apr-06","May-06","Jun-06","Jul-06","Aug-06","Sep-06","Oct-06","Nov-06","Dec-06","Jan-07","Feb-07","Mar-07","Apr-07","May-07","Jun-07","Jul-07","Aug-07","Sep-07","Oct-07","Nov-07","Dec-07","Jan-08","Feb-08","Mar-08","Apr-08","May-08","Jun-08","Jul-08","Aug-08","Sep-08","Oct-08","Nov-08","Dec-08","Jan-09","Feb-09","Mar-09","Apr-09","May-09","Jun-09","Jul-09","Aug-09","Sep-09","Oct-09","Nov-09","Dec-09","Jan-10","Feb-10","Mar-10","Apr-10","May-10","Jun-10","Jul-10","Aug-10","Sep-10","Oct-10","Nov-10","Dec-10","Jan-11","Feb-11"
-        };
-
-
-        //RUN CS IN PARALLEL!!
-        IntStream.range(0, monthyear.length).parallel().forEach(z ->{
-            double[] caseShiller = new double[13];
-            for (int i = 0; i < 13; i++) {
-                caseShiller[i] = Double.parseDouble(HPI[z + 1][i + 1]);
-            }
-
-            double[] yieldCurve = new double[11];
-            for (int i = 0; i < 11; i++){
-                yieldCurve[i] = Double.parseDouble(YieldCurve[z + 1][i + 1]);
-            }
-
-            //System.out.println(Arrays.toString(yieldCurve));
-
-            //double[] counterfactualYieldCurve = {1.73, 1.74, 1.85, 2.28, 3.22, 3.75, 4.52, 4.97, 5.20, 5.86, 5.56};
-            double[] counterfactualYieldCurve = {2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2};
-
-            String ficoFicoPath = "C:\\Users\\ahyan\\Dropbox\\CreditSurfaceTheory\\Data\\FicoFico.csv";
-            /*
-            if (z < 72){
-                ficoFicoPath = "C:\\Users\\ahyan\\Dropbox\\CreditSurfaceTheory\\Data\\FicoFico.csv";
-            }else if (z >= 72 && z < 84){
-                ficoFicoPath = "C:\\Users\\ahyan\\Dropbox\\CreditSurfaceTheory\\Data\\FicoFicoAverage.csv";
-            }else if (z >= 84){
-                ficoFicoPath = "C:\\Users\\ahyan\\Dropbox\\CreditSurfaceTheory\\Data\\FicoFicoCrisis.csv";
-            }
-            */
-
-            CreditSurfaceTestingB creditSurfaceTestingB = new CreditSurfaceTestingB();
-            Matrix cs = creditSurfaceTestingB.CreditSurface(monthyear[z], caseShiller, counterfactualYieldCurve, ficoFicoPath);
-        });
 
     }
 
