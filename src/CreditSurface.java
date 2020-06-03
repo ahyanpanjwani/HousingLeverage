@@ -1,3 +1,8 @@
+/* This is the legacy credit surface with out the stochastic processes for interest rates and HPI.
+It interpolates over the yield curve to get the per period interest rate and the HPI is adaptively
+extrapolated (weighted avg + 2% for 28 years). I will not be using this anymore
+*/
+
 import Jama.Matrix;
 
 import org.apache.commons.math3.analysis.UnivariateFunction;
