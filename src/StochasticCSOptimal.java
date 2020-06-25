@@ -6,26 +6,26 @@ it doesn't have to bring in the files again and again.
 */
 
 import Jama.Matrix;
-import javafx.util.Pair;
+import org.apache.commons.math3.analysis.UnivariateFunction;
+import org.apache.commons.math3.analysis.interpolation.LinearInterpolator;
+import org.apache.commons.math3.analysis.interpolation.UnivariateInterpolator;
+import org.javatuples.Triplet;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
 
 import static java.lang.Math.*;
-import java.util.stream.IntStream;
 
 
 public class StochasticCSOptimal {
 
-    public double mortgage_rate(double H_0, double r_0, double mu_H, double mu_r, double sigma_H, double sigma_r, double rho,
-                                double T, int N, double OLTV){
+    public Triplet<Double, Double, Integer> CS_point(double H_0, double r_0, double mu_H, double mu_r, double sigma_H, double sigma_r, double rho,
+                                double T, int N, double OLTV, int m_index_guess){
+
+
 
         // set up mortgage grids
         int numberOfMortgageGridPoints = 2000-1;
@@ -72,8 +72,9 @@ public class StochasticCSOptimal {
         balance.add(0, H_0 * OLTV);
 
         double mortgage_rate = 0d;
+        int m_index = 0;
 
-        for(int m = 0; m < mortgageRateGrid.size(); m++) {
+        for(int m = m_index_guess; m < mortgageRateGrid.size(); m++) {
             mortgage_rate = mortgageRateGrid.get(m) / 12;
             double x = (mortgage_rate * balance.get(0)) / (1 - pow((1 + mortgage_rate), -N));
 
@@ -106,15 +107,21 @@ public class StochasticCSOptimal {
             DecimalFormat decimalFormat = new DecimalFormat("0.00");
             //System.out.println("Error = " + abs(V.get(N, N) - balance.get(0)));
 
+
             // Compute the error and if it is less than tolerance then end the run
             if (abs(balance.get(0) - V.get(N, N)) <= 0.025){
-                System.out.println("OLTV = " + OLTV + ", m = " + decimalFormat.format(mortgage_rate * 12 * 100));
+                //System.out.println("OLTV = " + OLTV + ", m = " + decimalFormat.format(mortgage_rate * 12 * 100));
+                m_index = m;
                 break;
             }
 
         }
 
-        return mortgage_rate * 12 * 100;
+        Triplet<Double, Double, Integer> CS_point = new Triplet<>(OLTV, mortgage_rate * 12 * 100, m_index);
+
+
+        return CS_point;
+
     }
 
 
@@ -128,38 +135,55 @@ public class StochasticCSOptimal {
         // the OLTV points for which I want to calculate the mortgage rate
         double[] OLTV = {0.3, 0.6, 0.7, 0.75, 0.8, 0.825, 0.875, 0.9, 0.92, 0.95, 0.97, 0.99, 1.0};
 
-        ArrayList<String> M =new ArrayList<>(Collections.nCopies(OLTV.length, " "));
-        ArrayList<Double> OLTV_processed = new ArrayList<>(Collections.nCopies(OLTV.length, 0d));
+        // list for capturing the mortgage rates for the credit surface
+        double[] M = new double[OLTV.length];
 
-        // run the code in parallel given certain inputs
-        IntStream.range(0, OLTV.length).parallel().forEach(z -> {
-            double mortgage_rate = new StochasticCSOptimal().mortgage_rate(125, 0.03, 0, 0, 0.0623, 0.0031,
-                    0, 30, 360, OLTV[z]);
+        // inital guess for mortgage rate index
+        int m_index_guess = 0;
 
-            OLTV_processed.set(z, OLTV[z]);
-            M.set(z, decimalFormat.format(mortgage_rate));
-        });
+        // loop through CS_point for each OLTV to find the corresponding mortgage rate and it's index
+        for (int i = 0; i < OLTV.length; i  ++){
+            Triplet<Double, Double, Integer> CS_point = new StochasticCSOptimal().CS_point(125, 0.03, 0, 0, 0.0623, 0.0031,
+                    0, 30, 360, OLTV[i], m_index_guess);
 
-        //
-        System.out.println(OLTV_processed);
-        System.out.println(M);
+            System.out.println("OLTV = " + CS_point.getValue0() + " , mortgage_rate = " + CS_point.getValue1() + " , m_index = " + CS_point.getValue2());
+
+            M[i] = CS_point.getValue1();
+
+            m_index_guess = CS_point.getValue2();
+        }
+
+
+        double[] OLTV_interpolated = {0.3, 0.4, 0.5, 0.6, 0.65, 0.7, 0.725, 0.75, 0.775, 0.8, 0.825, 0.85, 0.875, 0.9,
+                0.91, 0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98, 0.99, 0.995, 1.0};
+        double[] M_interpolated = new double[OLTV_interpolated.length];
+
+        UnivariateInterpolator univariateInterpolator = new LinearInterpolator();
+
+        UnivariateFunction univariateFunction = univariateInterpolator.interpolate(OLTV, M);
+
+        for (int i = 0; i < OLTV_interpolated.length; i++){
+            M_interpolated[i] = univariateFunction.value(OLTV_interpolated[i]);
+        }
 
         // print the Credit Surface to .csv file
-        try(FileWriter fileWriter = new FileWriter("C:\\Users\\ahyan\\Dropbox\\Housing Market and Leverage Cycle\\Code\\StochasticCreditSurface.csv")){
+        try(FileWriter fileWriter = new FileWriter("C:\\Users\\ahyan\\Dropbox\\Housing Market and Leverage Cycle\\Code\\StochCSMin.csv")){
             // Write header first
             fileWriter.append("OLTV");
             fileWriter.append(",");
             fileWriter.append("m (%)");
             fileWriter.append("\n");
             // Loop through to write the rest of the CS
-            for (int i = 0; i < M.size(); i++){
-                fileWriter.append(String.valueOf(OLTV_processed.get(i)));
+            for (int i = 0; i < OLTV_interpolated.length; i++){
+                fileWriter.append(String.valueOf(OLTV_interpolated[i]));
                 fileWriter.append(",");
-                fileWriter.append(M.get(i));
+                fileWriter.append(String.valueOf(M_interpolated[i]));
                 fileWriter.append("\n");
             }
             fileWriter.close();
         }catch (IOException ioe){ioe.printStackTrace();}
+
+
 
         long endTime = System.nanoTime();
 
