@@ -1,10 +1,11 @@
-/* This is the legacy credit surface with out the stochastic processes for interest rates and HPI.
+/* THIS FILE IS REDUNDANT!
+
+This is the legacy credit surface with out the stochastic processes for interest rates and HPI.
 It interpolates over the yield curve to get the per period interest rate and the HPI is adaptively
 extrapolated (weighted avg + 2% for 28 years). I will not be using this anymore
 */
 
 import Jama.Matrix;
-
 import org.apache.commons.math3.analysis.UnivariateFunction;
 import org.apache.commons.math3.analysis.interpolation.SplineInterpolator;
 import org.apache.commons.math3.analysis.interpolation.UnivariateInterpolator;
@@ -16,10 +17,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.IntStream;
 
 
-public class CreditSurface {
+public class DeterministicCS {
 
     public Matrix CreditSurface(String MonthYear, double[] HPIYear, double[] yieldCurve) {
 
