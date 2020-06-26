@@ -12,7 +12,7 @@ import static java.lang.Math.*;
 
 
 
-/** This files builds on LifeCycleProblemC.java. The C iteration was had buy and refinance option during life
+/** This files builds on LifeCycleProblemC.java. The C iteration had buy and refinance option during life
  * while ownership happened only at birth. I.e., agents could not adjust the quantity of housing they owned
  * later in life - they were stuck with what they had bought at birth and could refinance at best only.
  * In this iteration of the model, I will allow households to buy or sell new housing, essentially by
@@ -192,6 +192,7 @@ public class LifeCycleProblemD {
         double CC_R = 0;
         double VV_S = pow(-10, 5); // value from *S*elling
         double CC_S = 0;
+        double QQ_S = 0;
 
         // problems for households in ther interim periods of life (current, refi, buy/sell)
         if (age < T - 1 && age >= 1){
@@ -220,8 +221,9 @@ public class LifeCycleProblemD {
                     expected = 0;
                     //------------------REFINANCE: START---------------------------//
                     for (int iep = 0; iep < ne; iep++){
-                        expected = expected + P.get(ie, iep) * V[age + 1][iap][iep][iq][iCSp][0];
+                        expected = expected + P.get(ie, iep) * V[age + 1][iap][iep][iq][iCSp][1];
                     }
+                    mortgage_payment = mgrid[iCSp] * lgrid[iCSp] * pH * qgrid[iq] / (1 - pow(1 + mgrid[iCSp], - N));
                     consumption = (1 + r) * agrid[ia] + w * exp(egrid[ie]) + (lgrid[iCSp] - current_ltv) * pH * qgrid[iq] - agrid[iap] - mortgage_payment;
                     utility = (1 - alpha) * log(consumption) + alpha * log(qgrid[iq]) + beta * expected;
                     if (consumption <= 0){utility = pow(-10, 5);}
@@ -232,25 +234,40 @@ public class LifeCycleProblemD {
                     //--------------------REFINANCE: END-----------------------------//
 
 
-                    //--------------------BUY/SELL: START----------------------------//
                     for (int iqp = 0; iqp < nq; iqp++){
+                        //--------------------BUY/SELL: START----------------------------//
                         expected = 0;
                         for (int iep = 0; iep < ne; iep++){
-                            expected = expected + P.get(ie, iep) * V[age + 1][iap][iep][iqp][iCSp][0];
+                            expected = expected + P.get(ie, iep) * V[age + 1][iap][iep][iqp][iCSp][1];
                         }
+                        mortgage_payment = mgrid[iCSp] * lgrid[iCSp] * pH * qgrid[iqp] / (1 - pow(1 + mgrid[iCSp], - N));
                         consumption = (1 + r) * agrid[ia] + w * exp(egrid[ie]) + (1 - current_ltv) * pH * qgrid[iq] - (1 - lgrid[iCSp]) * pH * qgrid[iqp] - agrid[iap] - mortgage_payment;
-                        utility = (1 - alpha) * log(consumption) + alpha * log(qgrid[iq]) + beta * expected;
+                        utility = (1 - alpha) * log(consumption) + alpha * log(qgrid[iqp]) + beta * expected;
                         if (consumption <= 0){utility = pow(-10, 5);}
                         if (utility >= VV_S){
                             VV_S = utility;
                             CC_S = consumption;
-                            QQ = qgrid[iqp];
+                            QQ_S = qgrid[iqp];
                         }
+                        //--------------------BUY/SELL: END----------------------------//
                     }
                 }
+                //-----------------REFINANCE / BUY-SELL: END---------------------//
             }
+
+            // now find the option that provides maximum value (and corresponding policy function like consumption and quantity of housing owned)
             VV = max(VV_C, max(VV_R, VV_S));
-            CC = max(CC_C, max(CC_R, CC_S));
+            if (VV == VV_C){
+                CC = CC_C;
+                QQ = qgrid[iq];
+            }else if (VV == VV_R){
+                CC = CC_R;
+                QQ = qgrid[iq];
+            }else if (VV == VV_S){
+                CC = CC_S;
+                QQ = QQ_S;
+            }
+
         }
 
 
