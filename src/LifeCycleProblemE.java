@@ -1,13 +1,3 @@
-/** This file creates a model of housing where households buy some amount, q, of housing at birth (they have to,
- * renting is not an option currently) and then either stay current or refinance their mortgage with a
- * bequest motive at the end. Agents vary by the wealth they are born with and the productivity of their labor.
- * Productivity follows a simple AR(1) process, discretized a la Tauchen (1986).
- *
- * In the next iteration of this model, LifeCycleProblemD.java, I will allow for sales and purchase of housing
- * quantity, q, during the lifetime. This will be introduced using nested loops within the asset and credit
- * surface loops for refinancing.
- */
-
 import Jama.Matrix;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.math3.distribution.NormalDistribution;
@@ -19,8 +9,16 @@ import java.util.List;
 import java.util.stream.IntStream;
 
 import static java.lang.Math.*;
+import static java.lang.Math.max;
 
-public class LifeCycleProblemC {
+/**
+ * In this file, LifeCycleProblemE.java, I will update the D-version of the model to include default.
+ * In v.D: stay current, refinance, buy/sell
+ * In v.E: stay current, refinance, buy/sell, default
+ * The option to default will be introduced as a nested loop with the buy/sell loop (under the loop for q).
+ */
+
+public class LifeCycleProblemE {
 
     // asset grid
     double[] agrid(int na, double amin, double amax){
@@ -148,20 +146,23 @@ public class LifeCycleProblemC {
         double expected;
         double utility;
         double consumption;
-        double mortgage_payment = mgrid[iCS] * lgrid[iCS] * pH * qgrid[iq] / (1 - pow(1 + mgrid[iCS], - N));
-        double current_balance = lgrid[iCS] * pH * qgrid[iq] * (pow(1 + mgrid[iCS], N) - pow(1 + mgrid[iCS], ngrid[in])) / (pow(1 + mgrid[iCS], N) - 1);
-        double current_ltv = current_balance / (pH * mu * qgrid[iq]);
         double bequest;
-        double CC = 0.0;
-        double BB = 0.0;
-        double VV = pow(-10.0, 5.0);
+        double VV = pow(-10, 5);
+        double CC = 0;
+        double QQ = 0;
+        double BB = 0;
 
-        // TERMINAL PERIOD PROBLEM
+        // problem for households in the terminal period of life (choose risk-free assets to maximize bequest)
         if (age == T - 1){
+            double mortgage_payment = mgrid[iCS] * lgrid[iCS] * pH * qgrid[iq] / (1 - pow(1 + mgrid[iCS], - N));
+            // balance and ltv in the next period (p = prime) i.e. the period after death when their assets will be liquidated for the bequest
+            double balancep = lgrid[iCS] * pH * qgrid[iq] * (pow(1 + mgrid[iCS], N) - pow(1 + mgrid[iCS], ngrid[in])) / (pow(1 + mgrid[iCS], N) - 1);
+            double ltvp = balancep / (pH * mu * qgrid[iq]);
+
             for (int iap = 0; iap < na; iap++){
                 expected = 0;
                 consumption = (1 + r) * agrid[ia] + w * exp(egrid[ie]) - agrid[iap] - mortgage_payment;
-                bequest = agrid[iap] + (pH * mu * qgrid[iq]) * (1 - current_ltv);
+                bequest = agrid[iap] + (pH * mu * qgrid[iq]) * (1 - ltvp);
 
                 utility = (1 - alpha) * log(consumption) + alpha * log(qgrid[iq]) + beta * log(bequest);
 
@@ -178,11 +179,21 @@ public class LifeCycleProblemC {
         double CC_C = 0;
         double VV_R = pow(-10, 5); //value from *R*efinancing
         double CC_R = 0;
+        double VV_S = pow(-10, 5); // value from *S*elling
+        double CC_S = 0;
+        double QQ_S = 0;
+        double VV_D = pow(-10, 5); // value from *D*efault
+        double CC_D = 0;
+        double QQ_D = 0;
 
-        // INTERIM PERIOD PROBLEMS
-        if (age < T - 1 && age > 0){
+        // problems for households in ther interim periods of life (current, refi, buy/sell)
+        if (age < T - 1 && age >= 1){
+            double mortgage_payment = mgrid[iCS] * lgrid[iCS] * pH * qgrid[iq] / (1 - pow(1 + mgrid[iCS], - N));
+            double current_balance = lgrid[iCS] * pH * qgrid[iq] * (pow(1 + mgrid[iCS], N) - pow(1 + mgrid[iCS], ngrid[in])) / (pow(1 + mgrid[iCS], N) - 1);
+            double current_ltv = current_balance / (pH * qgrid[iq]);
+
             for (int iap = 0; iap < na; iap++){
-                // STAY CURRENT
+                //--------------STAY CURRENT: START--------------------//
                 expected = 0;
                 for (int iep = 0; iep < ne; iep++){
                     expected = expected + P.get(ie, iep) * V[age + 1][iap][iep][iq][iCS][in + 1];
@@ -195,32 +206,86 @@ public class LifeCycleProblemC {
                     VV_C = utility;
                     CC_C = consumption;
                 }
+                //-----------------STAY CURRENT: END--------------------//
 
-                // REFINANCE
+                //-----------------REFINANCE / BUY-SELL / DEFAULT: START---------------------//
                 for (int iCSp = 0; iCSp < nCS; iCSp++){
                     expected = 0;
+                    //------------------REFINANCE: START---------------------------//
                     for (int iep = 0; iep < ne; iep++){
-                        expected = expected + P.get(ie, iep) * V[age + 1][iap][iep][iq][iCSp][0];
+                        expected = expected + P.get(ie, iep) * V[age + 1][iap][iep][iq][iCSp][1];
                     }
-                    consumption = (1 + r) * agrid[ia] + w * exp(egrid[ie])+ (lgrid[iCSp] - current_ltv) * pH * qgrid[iq] - agrid[iap];
+                    mortgage_payment = mgrid[iCSp] * lgrid[iCSp] * pH * qgrid[iq] / (1 - pow(1 + mgrid[iCSp], - N));
+                    consumption = (1 + r) * agrid[ia] + w * exp(egrid[ie]) + (lgrid[iCSp] - current_ltv) * pH * qgrid[iq] - agrid[iap] - mortgage_payment;
                     utility = (1 - alpha) * log(consumption) + alpha * log(qgrid[iq]) + beta * expected;
                     if (consumption <= 0){utility = pow(-10, 5);}
                     if (utility >= VV_R){
                         VV_R = utility;
                         CC_R = consumption;
                     }
-                }
+                    //--------------------REFINANCE: END-----------------------------//
 
+
+                    for (int iqp = 0; iqp < nq; iqp++){
+                        expected = 0;
+                        for (int iep = 0; iep < ne; iep++){
+                            expected = expected + P.get(ie, iep) * V[age + 1][iap][iep][iqp][iCSp][1];
+                        }
+                        //--------------------BUY/SELL: START----------------------------//
+                        mortgage_payment = mgrid[iCSp] * lgrid[iCSp] * pH * qgrid[iqp] / (1 - pow(1 + mgrid[iCSp], - N));
+                        consumption = (1 + r) * agrid[ia] + w * exp(egrid[ie]) + (1 - current_ltv) * pH * qgrid[iq] - (1 - lgrid[iCSp]) * pH * qgrid[iqp] - agrid[iap] - mortgage_payment;
+                        utility = (1 - alpha) * log(consumption) + alpha * log(qgrid[iqp]) + beta * expected;
+                        if (consumption <= 0){utility = pow(-10, 5);}
+                        if (utility >= VV_S){
+                            VV_S = utility;
+                            CC_S = consumption;
+                            QQ_S = qgrid[iqp];
+                        }
+                        //--------------------BUY/SELL: END----------------------------//
+
+                        //--------------------DEFAULT: START---------------------------//
+                        consumption = (1 + r) * agrid[ia] + w * exp(egrid[ie]) - (1 - lgrid[iCSp]) * pH * qgrid[iqp] - agrid[iap] - mortgage_payment;
+                        utility = (1 - alpha) * log(consumption) + alpha * log(qgrid[iq]) + beta * expected;
+                        if (consumption <= 0){utility = pow(-10, 5);}
+                        if (utility >= VV_D){
+                            VV_D = utility;
+                            CC_D = consumption;
+                            QQ_D = qgrid[iqp];
+                        }
+                        //--------------------DEFAULT: END---------------------------//
+                    }
+                }
+                //-----------------REFINANCE / BUY-SELL: END---------------------//
             }
-            VV = max(VV_C, VV_R);
-            CC = max(CC_C, CC_R);
+
+            // now find the option that provides maximum value (and corresponding policy function like consumption and quantity of housing owned)
+            VV = max(max(VV_C, VV_S), max(VV_R, VV_D));
+            if (VV == VV_C){
+                CC = CC_C;
+                QQ = qgrid[iq];
+                System.out.println("curr");
+            }else if (VV == VV_R){
+                CC = CC_R;
+                QQ = qgrid[iq];
+                System.out.println("refi");
+            }else if (VV == VV_S){
+                CC = CC_S;
+                QQ = QQ_S;
+                System.out.println("sell" + " , " + " q: " + qgrid[iq] +  " , q': " + QQ);
+            }else if (VV == VV_D){
+                CC = CC_D;
+                QQ = QQ_D;
+                System.out.println("deft");
+            }
+
         }
 
 
-        double[] out = new double[2];
-        out[0] = VV;
-        out[1] = CC;
-        return out;
+        double[] output = new double[3];
+        output[0] = VV;
+        output[1] = CC;
+        output[2] = QQ;
+        return output;
     }
 
     // the routine for solving a new born household's problem.
@@ -269,8 +334,6 @@ public class LifeCycleProblemC {
         return out;
     }
 
-
-
     public static void main(String args[]){
 
         long startTime = System.nanoTime();
@@ -290,8 +353,8 @@ public class LifeCycleProblemC {
         double lambda_eps = 0.99;
         double m = 1.5;
 
-        double qmin = 4;      // minimum housing quantity
-        double qmax = 20;       // maximum hosuing quantity
+        double qmin = 0.0001;      // minimum housing quantity
+        double qmax = 0.3;       // maximum hosuing quantity
 
         // file path for the credit surface
         String CSfilePath = "DataWork/LeverageCycle/StochCSRealistic.csv";
@@ -301,22 +364,22 @@ public class LifeCycleProblemC {
         double beta = 0.97;         // discount factor
         double w = 1;               // wages
         double r = 0.03;            // risk free interest rate
-        double pH = 0.9937;           // house price (index)
+        double pH = 30;           // house price (index)
         double muH = 1;             // house price growth rate (gross)
 
 
         // Calling all the grid routines
-        LifeCycleProblemC lifeCycleModelC = new LifeCycleProblemC();
-        double[] agrid = lifeCycleModelC.agrid(na, amin, amax);                     // asset grid
-        double[] egrid = lifeCycleModelC.egrid(ne, sigma_eps, lambda_eps, m);       // productivity grid
-        Matrix P = lifeCycleModelC.P(ne, sigma_eps, lambda_eps, m, egrid);          // productivity transition matrix
-        double[] qgrid = lifeCycleModelC.qgrid(nq, qmin, qmax);                     // quantity grid
-        double[] lgrid = lifeCycleModelC.lgrid(CSfilePath, nCS);                    // oltv grid
-        double[] mgrid = lifeCycleModelC.mgrid(CSfilePath, nCS);                    // mortgage rate grid
-        double[] ngrid = lifeCycleModelC.ngrid(N + 1, 0, N);               // mortgage age grid
-        double[][][][][][] V = lifeCycleModelC.V(T, na, ne, nq, nCS, N + 1);     // value function for rest of life
-        double[][] V_0 = lifeCycleModelC.V_0(na, ne);                                // value function for newborns
-        double[][] Q_0 = lifeCycleModelC.V_0(na, ne);                                // policy function for quantity bought
+        LifeCycleProblemE lifeCycleProblemE= new LifeCycleProblemE();
+        double[] agrid = lifeCycleProblemE.agrid(na, amin, amax);                     // asset grid
+        double[] egrid = lifeCycleProblemE.egrid(ne, sigma_eps, lambda_eps, m);       // productivity grid
+        Matrix P = lifeCycleProblemE.P(ne, sigma_eps, lambda_eps, m, egrid);          // productivity transition matrix
+        double[] qgrid = lifeCycleProblemE.qgrid(nq, qmin, qmax);                     // quantity grid
+        double[] lgrid = lifeCycleProblemE.lgrid(CSfilePath, nCS);                    // oltv grid
+        double[] mgrid = lifeCycleProblemE.mgrid(CSfilePath, nCS);                    // mortgage rate grid
+        double[] ngrid = lifeCycleProblemE.ngrid(N + 1, 0, N);               // mortgage age grid
+        double[][][][][][] V = lifeCycleProblemE.V(T, na, ne, nq, nCS, N + 1);     // value function for rest of life
+        double[][] V_0 = lifeCycleProblemE.V_0(na, ne);                                // value function for newborns
+        double[][] Q_0 = lifeCycleProblemE.V_0(na, ne);                                // policy function for quantity bought
 
         // Building the stat space
         Integer[][] matrix1 = new Integer[5][];
@@ -338,7 +401,7 @@ public class LifeCycleProblemC {
             IntStream.range(0, Z).parallel().forEach(z ->{
                 List<Integer> node = stateSpace1.get(z);
                 V[finalAge][node.get(0)][node.get(1)][node.get(2)][node.get(3)][node.get(4)]
-                        = lifeCycleModelC.value(finalAge, node.get(0), node.get(1), node.get(2), node.get(3), node.get(4),
+                        = lifeCycleProblemE.value(finalAge, node.get(0), node.get(1), node.get(2), node.get(3), node.get(4),
                         T, na, ne, nq, nCS, N,
                         agrid, egrid, P, qgrid, lgrid, mgrid, ngrid, V, alpha, beta, w, r, pH, muH, N)[0];
             });
@@ -357,26 +420,18 @@ public class LifeCycleProblemC {
         System.out.println("age = " + age);
         IntStream.range(0, na * ne).parallel().forEach(z -> {
             List<Integer> node = stateSpace2.get(z);
-            V_0[node.get(0)][node.get(1)] = lifeCycleModelC.value_0(age, node.get(0), node.get(1), T, na, ne, nq, nCS, N,
+            V_0[node.get(0)][node.get(1)] = lifeCycleProblemE.value_0(age, node.get(0), node.get(1), T, na, ne, nq, nCS, N,
                     agrid, egrid, P, qgrid, lgrid, mgrid, ngrid, V, alpha, beta, w, r, pH, muH, N)[0];
-            Q_0[node.get(0)][node.get(1)] = lifeCycleModelC.value_0(age, node.get(0), node.get(1), T, na, ne, nq, nCS, N,
+            Q_0[node.get(0)][node.get(1)] = lifeCycleProblemE.value_0(age, node.get(0), node.get(1), T, na, ne, nq, nCS, N,
                     agrid, egrid, P, qgrid, lgrid, mgrid, ngrid, V, alpha, beta, w, r, pH, muH, N)[2];
             //System.out.println(Q_0[node.get(0)][node.get(1)] + " , " + agrid[node.get(0)] + " , " + egrid[node.get(1)]);
         });
 
-        // sum the amount of housing demanded by newborns over assets and productivity (currently this is equally
-        // weighted but eventually it should be weighted)
-        double Q = 0;
-        for (int ia = 0; ia < na; ia++){
-            for (int ie = 0; ie < ne; ie++){
-                System.out.println(Q_0[ia][ie] + " , " + agrid[ia] + " , " + exp(egrid[ie]));
-                Q = Q + Q_0[ia][ie];
-            }
-        }
-        System.out.println("Q = " + Q);
-
         long endTime = System.nanoTime();
-        System.out.println("run time = " + (endTime - startTime) * 1e-9 + " secs");
+        System.out.println("run time = " + (endTime - startTime) * 1e-9 / 60 + " mins");
+
 
     }
+
+
 }
