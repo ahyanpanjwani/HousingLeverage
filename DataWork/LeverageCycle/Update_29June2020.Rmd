@@ -1,0 +1,316 @@
+---
+title: "Life Cycle Consumption and Leverage"
+author: "Ahyan Panjwani"
+date: "6/30/2020"
+output: 
+  ioslides_presentation:
+    mathjax: "http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
+    fontsize: 11pt
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Updates I
+
+- Life cycle model of consumption and housing
+- Households have the option to stay current, refinance, buy/sell, default
+- Live for $T$ periods, leave a bequest
+- Buy some housing at birth 
+- Select mortgage from the credit surface offered
+    - Endogenous leverage
+
+## Updates II
+
+- State space becoming very large:
+    1. assets $a \in A$
+    2. productivity $e \in E$ 
+    3. housing quantity $q \in Q$
+    4. $(m, OLTV) \in \mathcal{C}$
+    5. $LTV \in L$ (contempranoeous loan-to-value)
+    
+$$
+\text{state space = } A \times E \times Q \times \mathcal{C} \times L \subset \mathbb{R}^5
+$$
+
+- No FICO and rental market for now
+
+## End of Life: Bequest
+
+$$
+\small
+\begin{align*}
+V(T, a, q, (m, OLTV), LTV, e; p) & = \max_{a'} u(c, q) \\
+& + \beta \mathbb{E}V(T + 1, b'; p')\\
+\end{align*}
+$$
+
+$$
+\small
+\begin{align*}
+&c + a' + x(m, OLTV, q; p) = (1 + r)a + we\\
+&b' = (1 + r) a' + (1 - LTV')\times p' \times q'\\
+&p' = \Gamma(p)
+\end{align*}
+$$
+
+
+where 
+
+1. $x(m, OLT, q; p)$: the mortgage payment
+2. $b'$: the expected bequest
+3. $p' = \Gamma(p)$: rule for forming expectation of home price
+
+## Choices Abound: Stay Current
+
+$$
+\small
+\begin{align*}
+&V^C(t, a , q, (m, OLTV), LTV, e; p) = \max_{a'} u(c, q) \\
+& + \beta\mathbb{E}V(t + 1, a', q, (m, OLTV), LTV', e'; p')\\
+&\\
+& c + a' + x(m, OLTV, q; p) = (1 + r) a + we\\
+& p' = \Gamma(p)\\
+& e' \sim \mathbb{P}(e'|e)
+\end{align*}
+$$
+
+where
+
+1. $e' \sim \mathbb{P}(e'|e)$: Markov chain; AR(1) discretized a la Tauchen (1986)
+
+
+## Choices abound: Refinance
+$$
+\small
+\begin{align*}
+& V^R(t, a, q, (m, OLTV), LTV, e; p) = \max_{a', (\overline{m}, \overline{OLTV}) \in \mathcal{C}} u(c, q) \\
+& + \beta \mathbb{E} V(t + 1, a', q', (\overline{m}, \overline{OLTV}), \overline{LTV}', e'; p')\\
+\end{align*}
+$$
+$$
+\small
+\begin{align*}
+c + a' + x(\overline{m}, \overline{OLTV}, q; p) & = (1 + r)a + we \\
+                                                & + (\overline{OLTV} - LTV)pq
+\end{align*}
+$$
+where
+
+1. $(\overline{m}, \overline{OLTV}) \in \mathcal{C}$: the new mortgage the agent selects from the surface
+2. $\overline{LTV}$: contemporaneous LTV for the new mortgage
+3. $(\overline{OLTV} - LTV)pq$: cash-out refinance windfall
+
+
+## Choices abound: Buy/Sell
+
+$$
+\small
+\begin{align*}
+& V^S(t, a, q, (m, OLTV), LTV, e; p) = \max_{a', q', (\overline{m}, \overline{OLTV}) \in \mathcal{C}} u(c, q') \\
+& + \beta \mathbb{E}V(t + 1, a', q', (\overline{m}, \overline{OLTV}), \overline{LTV}', e'; p')
+\end{align*}
+$$
+
+$$
+\small
+\begin{align*}
+c + a' + x(\overline{m}, \overline{OLTV}, q'; p) + (1 - \overline{OLTV})pq' & \\
+= (1 + r)a + we + (1 - LTV)pq\\
+\end{align*}
+$$
+where
+1. $(1 - \overline{OLTV})pq'$: new downpayment
+2. $(1 - LTV)pq$: equity windfall from sales
+
+## Chocies abound: Default
+
+$$
+\small
+\begin{align*}
+& V^D(t, a, q, (m, OLTV), LTV, e; p) = \max_{a', q', (\overline{m}, \overline{OLTV}) \in \mathcal{C}} u(c, q) \\
+& + \beta \mathbb{E}V(t + 1, a', q', (\overline{m}, \overline{OLTV}), \overline{LTV}', e'; p')
+\end{align*}
+$$
+$$
+\small
+\begin{align*}
+c + a' + x(\overline{m}, \overline{OLTV}, q'; p) + (1 - \overline{OLTV})pq' & \\
+= (1 + r)a + we\\
+\end{align*}
+$$
+where
+
+1. **No** equity extraction
+2. Live in same housing for on period
+
+## Discrete Choice
+$$
+\small
+\begin{equation*}
+    V(t, a, q, (m, OLTV), LTV, e; p) = \max
+    \begin{cases}
+    V^C & stay \: current\\
+    V^R & refinance \\
+    V^S & buy/sell\\
+    V^D & default
+\end{cases}
+\end{equation*}
+$$
+
+## Buying at Birth
+
+$$
+\small
+\begin{align*}
+V(0, a, e; p) &= \max_{a', q, (m, OLTV) \in \mathcal{C}} u(c, q) \\
+              & + \beta\mathbb{E}V(1, a', q, (m, OLTV), LTV', e'; p')
+\end{align*}
+$$
+$$
+\small
+\begin{align*}
+c + a' + x(m, OLTV, q; p) + (1 - OLTV)pq = a + we 
+\end{align*}
+$$
+where
+
+1. $(1 - OLTV)pq$: downpayment
+
+## Grids
+
+- $A$: 20 points
+- $Q$: 20 points
+- $\mathcal{C}$: 26 points
+- $L$: 10 points (i.e. mortgage term of 10 years)
+- $E$: 9 points
+- $T$: 10 points (i.e. 10 cohorts)
+
+For each cohort: 
+
+$$
+\small
+\begin{align*}
+& A \times Q \times \mathcal{C} \times L \times E\\
+\Rightarrow & 20 \times 20 \times 26 \times 10 \times 9\\
+\Rightarrow & \sim 1 \: \text{million nodes / cohort}
+\end{align*}
+$$
+
+## Model Logic
+ - Given prices, lender develops credit surface
+ - Agents optimize given their state variables, credit surface, and prices
+ - House price, $p$, adjusts s.t. housing mkt clears
+ 
+$$
+\begin{align*}
+Q_D(p) &= \int_{h \in H} q^h(p) = \overline{Q}_S
+\end{align*}
+$$
+where $H$ is the state space, $\overline{Q}_S$ is fixed supply of housing
+
+ - Each $h \in H$ represents a different household
+ 
+
+## Computation
+
+ - State space is very large
+ - Use parallel within cohorts
+ - Use nested loops for more efficiency
+ - Precomputation of integrals
+ - Starting to use *sparse grids* to reduce nodes
+    + This is preliminary at this stage
+    
+<br>
+All runs local
+
+ - $\texttt{Intel Core i7-9750, 2.60GHz x 6 x 2}$
+ - $\texttt{Ubuntu (Linux) 20.04; Java 11}$
+ - Avg core temperature: 87 Celsius (critical at 100$^\circ$C)
+
+
+
+
+## Computation: Results
++-----------------+--------------------------------------------+---------------+
+|Model            |Computation                                 |Run-time       |
++=================+============================================+===============+
+|C                |Parallel                                    | < 1m          |
++-----------------+--------------------------------------------+---------------+
+|C, R             |Parallel (nested)                           | ~ 1m          |
++-----------------+--------------------------------------------+---------------+
+|C, R, S          |Parallel (nested)                           | ~ 21m         |
++-----------------+--------------------------------------------+---------------+
+|C, R, S, D       |Serial                                      | ~ 3.5h        |
++-----------------+--------------------------------------------+---------------+
+|C, R, S, D       |Parallel                                    | ~ 57m         |
++-----------------+--------------------------------------------+---------------+
+|C, R, S, D       |Parallel (nested)                           | ~ 32m         |
++-----------------+--------------------------------------------+---------------+
+|C, R, S, D       |Parallel (nested), Precomp Integrals        | ~ 22m         |
++-----------------+--------------------------------------------+---------------+
+|C, R, S, D       |Parallel (nested), Precomp Integrals, Sparse| ~ 4m          |
++-----------------+--------------------------------------------+---------------+
+
+
+## Credit Surface
+
+```{r echo = FALSE, warning=FALSE, message=FALSE, fig.align='center'}
+library('plotly')
+
+cs <- read.csv('DataWork/LeverageCycle/StochCSRealistic10.csv', header = FALSE)
+
+fig1 <- plot_ly(cs, x = ~V1, y = ~V2, z = ~V3, marker = list(color = ~V3, colorscale = 'Portland', showscale = TRUE, size = 3),
+               hovertemplate = "FICO: %{x}<extra></extra> <br>LTV: %{y}<br> m: %{z:.2f}%<br>")
+
+fig1 <- fig1 %>% add_markers()
+fig1 <- fig1 %>% layout(scene = list(xaxis = list(title = 'FICO'),
+                                   yaxis = list(title = 'OLTV'),
+                                   zaxis = list(title = 'mortgage rate (%)')))
+fig1
+
+```
+
+
+## Demand Curve: In-Sync
+
+```{r echo = FALSE, warning=FALSE, message=FALSE, fig.align='center'}
+
+demandCurve <- read.csv(file = 'DataWork/LeverageCycle/DemandCurveSynced.csv')
+
+f <- list(
+  family = "Courier New, monospace",
+  size = 18,
+  color = "#7f7f7f"
+)
+x <- list(
+  title = "housing quantity (q)",
+  titlefont = f
+)
+y <- list(
+  title = "house price (p)",
+  titlefont = f
+)
+
+fig2 <- plot_ly(data = demandCurve, x = ~q, y = ~p,
+                marker = list(size = 10,
+                             color = 'rgba(255, 182, 193, .9)',
+                             line = list(color = 'rgba(152, 0, 0, .8)',
+                                         width = 2)))
+fig2 <- fig2 %>% add_trace(data = demandCurve, x = ~q, y = ~p, type="scatter", mode = "lines")
+
+fig2 <- fig2 %>% layout(xaxis = x, yaxis = y)
+
+fig2
+
+
+
+```
+
+
+## Next Steps
+
+1. Sparse grid implementation; interpolation
+2. University HPC cluster (Grace)

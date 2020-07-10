@@ -22,8 +22,9 @@ import static java.lang.Math.*;
 
 public class StochasticCSOptimal {
 
-    public Triplet<Double, Double, Integer> CS_point(double H_0, double r_0, double mu_H, double mu_r, double sigma_H, double sigma_r, double rho,
-                                double T, int N, double OLTV, int m_index_guess){
+    public Triplet<Double, Double, Integer> CS_point(double H_0, double r_0, double mu_H, double mu_r,
+                                                     double sigma_H, double sigma_r, double rho,
+                                                     double T, int N, double OLTV, int m_index_guess){
 
 
 
