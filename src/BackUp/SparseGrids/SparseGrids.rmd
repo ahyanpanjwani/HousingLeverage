@@ -1,0 +1,131 @@
+---
+title: "Sparse Grids"
+author: Ahyan Panjwani
+date: August 11th, 2020
+output: html_notebook
+---
+
+I want to evaluate the function
+$$
+f(x, y) = \frac{1}{|0.5 - x^4 - y^4| + 0.1}
+$$
+which is not particularly _well-behaved_ in that it has a discontinuity due to the absolute value, and
+it does not disappear at the boundaries. Evaluating the function through classical sparse grids is insufficient
+because ot requires too many points to capture the ridge. Adaptive sparse grids are better suited for this
+problem. This write-up demonstrates the potential of adaptive sparse grids.
+
+## Brute Force
+
+First, I directly evaluate the function over the unit square, $[0, 1]^2$ using $100^2$ points.
+
+```{r warning=FALSE, message=FALSE, fig.align='center'}
+
+library('plotly')
+
+data.classic <- read.csv('/home/ahyan/Dropbox/Housing Market and Leverage Cycle/Code/src/Sparse/CSG.csv', header = FALSE)
+
+fig1 <- plot_ly(data.classic, x = ~V1, y = ~V2, z = ~V3, marker = list(color = ~V3, colorscale = 'Portland', showscale = TRUE, size = 3))
+
+fig1 <- fig1 %>% layout(title = 'Direct Evaluation')
+
+fig1 <- fig1 %>% layout(scene = list(xaxis = list(title = 'x'),
+                                     yaxis = list(title = 'y'),
+                                     zaxis = list(title = 'f(x, y)')))
+
+fig1
+
+```
+
+## Classical Sparse Grids
+
+Now I evaluate the function on sparse grids of level 14. In two dimensions, that means almost 280,000 grid points.
+
+```{r warning=FALSE, message=FALSE, fig.align='center'}
+fig2 <- plot_ly(data.classic, x = ~V1, y = ~V2, z = ~V4, marker = list(color = ~V4, colorscale = 'Portland', showscale = TRUE, size = 3))
+
+fig2 <- fig2 %>% layout(title = 'Classical Sparse Grid')
+
+fig2 <- fig2 %>% layout(scene = list(xaxis = list(title = 'x'),
+                                     yaxis = list(title = 'y'),
+                                     zaxis = list(title = 'f(x, y)')))
+
+fig2
+```
+
+The error between brute force and sparse grids, calculated as the $L_2$ norm is 0.0889.
+
+$$
+L_2 = \frac{1}{N} \bigg(\sum_{i = 1}^N |f(x_i) - u(x_i)|^2\bigg)^\frac{1}{2}
+$$
+
+## Adaptive Sparse Grids
+
+Finally, I evaluate the function with adaptive sparse grids with level 5. In two dimensions, the algo starts
+with 257 bounds (boundary included) and iterates until the error is less than 0.1 which happens with 6571
+grid points and the error is 0.0897.
+
+```{r warning=FALSE, message=FALSE, fig.align='center'}
+data.adaptive <- read.csv('/home/ahyan/Dropbox/Housing Market and Leverage Cycle/Code/src/Sparse/ASG.csv', header = FALSE)
+
+fig3 <- plot_ly(data.adaptive, x = ~V1, y = ~V2, z = ~V4, marker = list(color = ~V4, colorscale = 'Portland', showscale = TRUE, size = 3))
+
+fig3 <- fig3 %>% layout(title = 'Adaptive Sparse Grids')
+
+fig3 <- fig3 %>% layout(scene = list(xaxis = list(title = 'x'),
+                                     yaxis = list(title = 'y'),
+                                     zaxis = list(title = 'f(x, y)')))
+
+fig3
+```
+
+
+## Life Cycle Problem
+
+Basic
+```{r warning=FALSE, message=FALSE, fig.align='center'}
+
+data.life <- read.csv('/home/ahyan/Dropbox/Housing Market and Leverage Cycle/Code/src/Sparse/Life.csv', header = FALSE)
+
+fig4 <- plot_ly(data.life, x = ~V1, y = ~V2, z = ~V3, marker = list(color = ~V3, colorscale = 'Portland', showscale = TRUE, size = 3))
+
+fig4 <- fig4 %>% layout(title = 'Direct')
+
+fig4 <- fig4 %>% layout(scene = list(xaxis = list(title = 'e'),
+                                     yaxis = list(title = 'x'),
+                                     zaxis = list(title = 'V(e, x)')))
+
+fig4
+
+```
+
+
+
+```{r warning=FALSE, message=FALSE, fig.align='center'}
+
+fig5 <- plot_ly(data.life, x = ~V1, y = ~V2, z = ~V4, marker = list(color = ~V4, colorscale = 'Portland', showscale = TRUE, size = 3))
+
+fig5 <- fig5 %>% layout(title = 'Adaptive')
+
+fig5 <- fig5 %>% layout(scene = list(xaxis = list(title = 'e'),
+                                     yaxis = list(title = 'x'),
+                                     zaxis = list(title = 'V(e, x)')))
+
+fig5
+```
+
+With Nelder-Mead
+```{r warning=FALSE, message=FALSE, fig.align='center'}
+
+data.lifeB <- read.csv('/home/ahyan/Dropbox/Housing Market and Leverage Cycle/Code/src/Sparse/LifeB.csv', header = FALSE)
+
+fig6 <- plot_ly(data.lifeB, x = ~V1, y = ~V2, z = ~V3, marker = list(color = ~V3, colorscale = 'Portland', showscale = TRUE, size = 3))
+
+fig6 <- fig6 %>% layout(title = 'Direct')
+
+fig6 <- fig6 %>% layout(scene = list(xaxis = list(title = 'e'),
+                                     yaxis = list(title = 'x'),
+                                     zaxis = list(title = 'V(e, x)')))
+
+fig6
+
+```

@@ -1,0 +1,13 @@
+H_0,52,hpi at origin
+r_0,0.03,interest rate at origin
+mu_H,0,hpi drift
+mu_r,0,interest rate drift
+sigma_H,0.0623,hpi vol
+sigma_r,0.0031,interest rate vol
+rho,0,correlation
+T,30,life of mortgage (yrs)
+N,360,life of mortgage (months)
+abs_accuracy,1e-3,accuracy for root finding
+number_iter,100,max iterations for root finding
+number_fico_bins,7,fico bins for CS
+number_ltv_bins,12,ltv bins for CS
